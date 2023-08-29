@@ -1,6 +1,13 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 
+Globals:
+  Api:
+    Cors:
+      AllowMethods: "'POST,GET,PUT,DELETE,OPTIONS'"
+      AllowHeaders: "'content-type'"
+      AllowOrigin: "'*'"
+
 Resources:
   TodoFunction:
     Type: AWS::Serverless::Function
@@ -13,30 +20,30 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref TodoTable
       Events:
-        GetTodo:
-          Type: Api
-          Properties:
-            Path: /todo/{id}
-            Method: GET
         GetTodos:
           Type: Api
           Properties:
-            Path: /todo
+            Path: /api/task
             Method: GET
         PutTodo:
           Type: Api
           Properties:
-            Path: /todo
+            Path: /api/task
             Method: POST
         DeleteTodo:
           Type: Api
           Properties:
-            Path: /todo/{id}
+            Path: /api/deleteTask/{id}
             Method: DELETE
         UpdateTodo:
           Type: Api
           Properties:
-            Path: /todo/{id}
+            Path: /api/task/{id}
+            Method: PUT
+        UndoTodo:
+          Type: Api
+          Properties:
+            Path: /api/undoTask/{id}
             Method: PUT
     Metadata:
       BuildMethod: makefile
@@ -54,4 +61,6 @@ Resources:
       ProvisionedThroughput:
         ReadCapacityUnits: 2
         WriteCapacityUnits: 2
-
+      Tags:
+        - Key: "DoNotNuke"
+          Value: "true"

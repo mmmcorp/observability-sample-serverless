@@ -1,0 +1,9 @@
+version = 0.1
+[default.deploy.parameters]
+stack_name = "observability-sample-serverless"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-9it8nm2han28"
+s3_prefix = "observability-sample-serverless"
+region = "ap-northeast-1"
+confirm_changeset = true
+capabilities = "CAPABILITY_IAM"
+image_repositories = []

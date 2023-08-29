@@ -6,20 +6,18 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/go-playground/validator/v10"
 )
 
 type UpdateTodo struct {
-	Name        string `json:"name" validate:"required"`
-	Description string `json:"description" validate:"required"`
-	Status      bool   `json:"status" validate:"required"`
+	Status bool `json:"status"`
 }
 
 type CreateTodo struct {
-	Name        string `json:"name" validate:"required"`
-	Description string `json:"description" validate:"required"`
+	Task string `json:"task" validate:"required"`
 }
 
 var validate *validator.Validate = validator.New()
@@ -27,18 +25,27 @@ var validate *validator.Validate = validator.New()
 func router(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 	log.Printf("Received req %#v", req)
 
-	switch req.HTTPMethod {
-	case "GET":
+	httpMethod := req.HTTPMethod
+	path := req.Path
+
+	switch {
+	case httpMethod == "GET" && path == "/api/task":
 		return processGet(ctx, req)
-	case "POST":
+	case httpMethod == "POST" && path == "/api/task":
 		return processPost(ctx, req)
-	case "DELETE":
-		return processDelete(ctx, req)
-	case "PUT":
+	case httpMethod == "PUT" && strings.HasPrefix(path, "/api/task/"):
 		return processPut(ctx, req)
+	case httpMethod == "PUT" && strings.HasPrefix(path, "/api/undoTask/"):
+		return processPut(ctx, req)
+	case httpMethod == "DELETE" && strings.HasPrefix(path, "/api/deleteTask/"):
+		return processDelete(ctx, req)
 	default:
-		return clientError(http.StatusMethodNotAllowed)
+		return events.APIGatewayProxyResponse{
+			StatusCode: 404,
+			Body:       "Not Found",
+		}, nil
 	}
+
 }
 
 func processGet(ctx context.Context, req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
@@ -70,7 +77,11 @@ func processGetTodo(ctx context.Context, id string) (events.APIGatewayProxyRespo
 
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
-		Body:       string(json),
+		Headers: map[string]string{
+			"Access-Control-Allow-Headers": "Content-Type",
+			"Access-Control-Allow-Origin":  "*",
+		},
+		Body: string(json),
 	}, nil
 }
 
@@ -90,7 +101,11 @@ func processGetTodos(ctx context.Context) (events.APIGatewayProxyResponse, error
 
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
-		Body:       string(json),
+		Headers: map[string]string{
+			"Access-Control-Allow-Headers": "Content-Type",
+			"Access-Control-Allow-Origin":  "*",
+		},
+		Body: string(json),
 	}, nil
 }
 
@@ -124,7 +139,9 @@ func processPost(ctx context.Context, req events.APIGatewayProxyRequest) (events
 		StatusCode: http.StatusCreated,
 		Body:       string(json),
 		Headers: map[string]string{
-			"Location": fmt.Sprintf("/todo/%s", res.Id),
+			"Location":                     fmt.Sprintf("/todo/%s", res.Id),
+			"Access-Control-Allow-Headers": "Content-Type",
+			"Access-Control-Allow-Origin":  "*",
 		},
 	}, nil
 }
@@ -153,7 +170,11 @@ func processDelete(ctx context.Context, req events.APIGatewayProxyRequest) (even
 
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
-		Body:       string(json),
+		Headers: map[string]string{
+			"Access-Control-Allow-Headers": "Content-Type",
+			"Access-Control-Allow-Origin":  "*",
+		},
+		Body: string(json),
 	}, nil
 }
 
@@ -164,18 +185,16 @@ func processPut(ctx context.Context, req events.APIGatewayProxyRequest) (events.
 	}
 
 	var updateTodo UpdateTodo
-	err := json.Unmarshal([]byte(req.Body), &updateTodo)
-	if err != nil {
-		log.Printf("Can't unmarshal body: %v", err)
-		return clientError(http.StatusUnprocessableEntity)
-	}
 
-	err = validate.Struct(&updateTodo)
-	if err != nil {
-		log.Printf("Invalid body: %v", err)
-		return clientError(http.StatusBadRequest)
+	path := req.Path
+
+	switch {
+	case strings.HasPrefix(path, "/api/task/"):
+		updateTodo = UpdateTodo{Status: true}
+	case strings.HasPrefix(path, "/api/undoTask/"):
+		log.Printf("here")
+		updateTodo = UpdateTodo{Status: false}
 	}
-	log.Printf("Received PUT request with item: %+v", updateTodo)
 
 	res, err := updateItem(ctx, id, updateTodo)
 	if err != nil {
@@ -197,7 +216,9 @@ func processPut(ctx context.Context, req events.APIGatewayProxyRequest) (events.
 		StatusCode: http.StatusOK,
 		Body:       string(json),
 		Headers: map[string]string{
-			"Location": fmt.Sprintf("/todo/%s", res.Id),
+			"Access-Control-Allow-Headers": "Content-Type",
+			"Access-Control-Allow-Origin":  "*",
+			"Location":                     fmt.Sprintf("/todo/%s", res.Id),
 		},
 	}, nil
 }
@@ -207,6 +228,10 @@ func clientError(status int) (events.APIGatewayProxyResponse, error) {
 	return events.APIGatewayProxyResponse{
 		Body:       http.StatusText(status),
 		StatusCode: status,
+		Headers: map[string]string{
+			"Access-Control-Allow-Headers": "Content-Type",
+			"Access-Control-Allow-Origin":  "*",
+		},
 	}, nil
 }
 
@@ -216,5 +241,9 @@ func serverError(err error) (events.APIGatewayProxyResponse, error) {
 	return events.APIGatewayProxyResponse{
 		Body:       http.StatusText(http.StatusInternalServerError),
 		StatusCode: http.StatusInternalServerError,
+		Headers: map[string]string{
+			"Access-Control-Allow-Headers": "Content-Type",
+			"Access-Control-Allow-Origin":  "*",
+		},
 	}, nil
 }

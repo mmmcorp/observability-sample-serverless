@@ -3,7 +3,7 @@ build:
 	sam build
 
 build-TodoFunction:
-	GOOS=linux CGO_ENABLED=0 go build -o $(ARTIFACTS_DIR)/main .
+	GOARCH=amd64 GOOS=linux CGO_ENABLED=0 go build -o $(ARTIFACTS_DIR)/main .
 
 .PHONY: init
 init: build

@@ -30,10 +30,9 @@ func init() {
 }
 
 type Todo struct {
-	Id          string `json:"id" dynamodbav:"id"`
-	Name        string `json:"name" dynamodbav:"name"`
-	Description string `json:"description" dynamodbav:"description"`
-	Status      bool   `json:"status" dynamodbav:"status"`
+	Id     string `json:"id" dynamodbav:"id"`
+	Task   string `json:"task" dynamodbav:"task"`
+	Status bool   `json:"status" dynamodbav:"status"`
 }
 
 func getItem(ctx context.Context, id string) (*Todo, error) {
@@ -102,10 +101,9 @@ func listItems(ctx context.Context) ([]Todo, error) {
 
 func insertItem(ctx context.Context, createTodo CreateTodo) (*Todo, error) {
 	todo := Todo{
-		Name:        createTodo.Name,
-		Description: createTodo.Description,
-		Status:      false,
-		Id:          uuid.NewString(),
+		Task:   createTodo.Task,
+		Status: false,
+		Id:     uuid.NewString(),
 	}
 
 	item, err := attributevalue.MarshalMap(todo)
@@ -171,12 +169,6 @@ func updateItem(ctx context.Context, id string, updateTodo UpdateTodo) (*Todo, e
 
 	expr, err := expression.NewBuilder().WithUpdate(
 		expression.Set(
-			expression.Name("name"),
-			expression.Value(updateTodo.Name),
-		).Set(
-			expression.Name("description"),
-			expression.Value(updateTodo.Description),
-		).Set(
 			expression.Name("status"),
 			expression.Value(updateTodo.Status),
 		),
